@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보건의료통계학 전수 인터랙티브 문제풀이 시스템</title>
+    <style>
+        :root {
+            --primary-color: #2b579a;
+            --secondary-color: #f2f4f8;
+            --accent-color: #e06666;
+            --text-color: #333333;
+            --border-color: #cccccc;
+            --correct-color: #155724;
+            --correct-bg: #d4edda;
+            --wrong-color: #721c24;
+            --wrong-bg: #f8d7da;
+        }
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 12px;
+            margin-top: 0;
+        }
+        .loading-box {
+            background: #e2e3e5;
+            border: 1px solid #d6d8db;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #383d41;
+        }
+        .main-layout {
+            display: flex;
+            gap: 25px;
+            margin-top: 20px;
+        }
+        .sidebar {
+            flex: 1;
+            min-width: 260px;
+            max-width: 320px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 750px;
+            overflow-y: auto;
+        }
+        .sidebar h3 {
+            margin-top: 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-color);
+            font-size: 16px;
+        }
+        .index-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .index-btn {
+            padding: 6px 2px;
+            font-size: 11px;
+            text-align: center;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .index-btn.active {
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+        .index-btn.solved-correct { background: #c3e6cb; color: #155724; }
+        .index-btn.solved-wrong { background: #f5c6cb; color: #721c24; }
+
+        .content-area { flex: 3; display: flex; flex-direction: column; }
+        .control-panel {
+            background: var(--secondary-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-weight: bold; font-size: 13px; }
+        select, button { padding: 10px; font-size: 14px; border-radius: 4px; border: 1px solid var(--border-color); }
+        button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #1e3d70; }
+        .btn-orange { background-color: #e06666; }
+        .btn-orange:hover { background-color: #cc5252; }
+
+        .quiz-status {
+            font-size: 15px; font-weight: bold; margin-bottom: 15px;
+            display: flex; justify-content: space-between; background: #eef2f7; padding: 12px; border-radius: 6px;
+        }
+        .card { border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; background: #fff; min-height: 350px; }
+        .q-header { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .q-no { font-weight: bold; color: var(--primary-color); font-size: 18px; }
+        .q-meta { background: #eef2f7; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: #555; }
+        .q-text { font-size: 17px; font-weight: bold; margin-bottom: 15px; color: #111; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option-item { display: flex; align-items: center; padding: 10px 15px; background: #fff; border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; }
+        .option-item:hover { background: #f1f5fa; }
+        .option-item.selected { background: #ebf3fc; border-color: var(--primary-color); font-weight: bold; }
+        .option-item input { margin-right: 12px; transform: scale(1.2); }
+        .feedback { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; }
+        .feedback.correct { background-color: var(--correct-bg); color: var(--correct-color); border: 1px solid #c3e6cb; display: block; }
+        .feedback.wrong { background-color: var(--wrong-bg); color: var(--wrong-color); border: 1px solid #f5c6cb; display: block; }
+        .explanation { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 14px; color: #444; }
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+        .nav-buttons button { min-width: 100px; }
+        .score-board { text-align: center; margin-top: 15px; padding: 12px; background: #eef2f7; border-radius: 8px; font-weight: bold; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📊 보건의료통계학 인터랙티브 문제풀이 시스템</h1>
+
+    <div class="loading-box" id="loading-box">
+        ⏳ 시스템에서 보건의료통계 문항 데이터(data.csv)를 자동으로 가져오는 중입니다...
+    </div>
+
+    <div id="workspace" class="main-layout hidden">
+        <div class="sidebar">
+            <h3>🎯 문항 내비게이터</h3>
+            <div class="index-grid" id="index-grid"></div>
+            <div class="score-board" id="score-board">진행도: 0% (0/0)</div>
+        </div>
+
+        <div class="content-area">
+            <div class="control-panel">
+                <div class="control-group">
+                    <label for="sort-order">📌 정렬 및 진도 분류</label>
+                    <select id="sort-order">
+                        <option value="original">파일 기록 순서</option>
+                        <option value="serial">문제번호 순 (원본 기준)</option>
+                        <option value="custom_seq" selected>★ 추가된 일련번호 열 기준 정렬</option>
+                        <option value="theory">교재 이론 챕터 (용어ID) 순서별</option>
+                        <option value="term">매칭 용어 가나다순</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="filter-term">🔍 특정 용어 묶어보기</label>
+                    <select id="filter-term">
+                        <option value="all">전체 문항 보기</option>
+                    </select>
+                </div>
+                <button type="button" onclick="applySettings()">설정 적용</button>
+            </div>
+
+            <div id="quiz-area">
+                <div class="quiz-status">
+                    <span id="txt-progress">문제를 불러오는 중...</span>
+                    <span id="txt-score">맞춘 개수: 0 / 0</span>
+                </div>
+                <div id="question-card-container"></div>
+                
+                <div class="nav-buttons">
+                    <button type="button" id="btn-prev" onclick="moveQuestion(-1)">◀ 이전 문제</button>
+                    <button type="button" id="btn-check" class="btn-orange" onclick="checkAnswer()">✔️ 정답 확인</button>
+                    <button type="button" id="btn-next" onclick="moveQuestion(1)">다음 문제 ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let masterData = []; 
+    let quizList = [];   
+    let currentIdx = 0;
+    let userAnswers = {}; 
+
+    // ★ [핵심 기능] 페이지 로드 시 같은 경로의 data.csv 파일을 비동기로 fetch하여 바로 구동
+    window.addEventListener('DOMContentLoaded', () => {
+        fetch('data.csv')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("data.csv 파일을 찾을 수 없거나 불러오지 못했습니다.");
+                }
+                return response.text();
+            })
+            .then(csvText => {
+                parseCSV(csvText);
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('loading-box').innerHTML = 
+                    `<span style="color:var(--accent-color);">❌ 에러: 웹 서버에 data.csv 파일이 일치하는 경로에 배포되었는지 확인해 주세요.</span>`;
+            });
+    });
+
+    function parseCSV(text) {
+        masterData = [];
+        const lines = [];
+        let row = [];
+        let inQuotes = false;
+        let currentField = '';
+
+        for (let i = 0; i < text.length; i++) {
+            let char = text[i];
+            let nextChar = text[i+1];
+
+            if (char === '"') {
+                if (inQuotes && nextChar === '"') {
+                    currentField += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                row.push(currentField.trim());
+                currentField = '';
+            } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                if (char === '\r' && nextChar === '\n') i++;
+                row.push(currentField.trim());
+                if (row.length > 1) lines.push(row);
+                row = [];
+                currentField = '';
+            } else {
+                currentField += char;
+            }
+        }
+        if (currentField) row.push(currentField.trim());
+        if (row.length > 1) lines.push(row);
+
+        if (lines.length === 0) return;
+
+        const headers = lines[0].map(h => h.replace(/[\ufeff\s]/g, '')); 
+        const idxProblemNo = headers.indexOf('문제번호');
+        const idxQuestion = headers.indexOf('문제');
+        const idxS1 = headers.indexOf('선택지1');
+        const idxS2 = headers.indexOf('선택지2');
+        const idxS3 = headers.indexOf('선택지3');
+        const idxS4 = headers.indexOf('선택지4');
+        const idxS5 = headers.indexOf('선택지5');
+        const idxAns = headers.indexOf('정답');
+        const idxExp = headers.indexOf('해설_임시');
+        const idxTerm = headers.indexOf('매칭용어(1개)');
+        const idxTermId = headers.indexOf('용어ID');
+        
+        let idxSerialNo = headers.indexOf('일련번호');
+        if (idxSerialNo === -1) {
+            idxSerialNo = headers.findIndex(h => h.includes('일련'));
+        }
+
+        for (let k = 1; k < lines.length; k++) {
+            const r = lines[k];
+            if (!r[idxQuestion] || r[idxQuestion] === "") continue;
+
+            let serialVal = idxSerialNo !== -1 ? parseInt(r[idxSerialNo]) : null;
+            if (isNaN(serialVal) || serialVal === null) {
+                serialVal = parseInt(r[idxProblemNo]) || k;
+            }
+
+            masterData.push({
+                id: parseInt(r[idxProblemNo]) || k, 
+                seq: serialVal,                    
+                q: r[idxQuestion],
+                s1: r[idxS1] || '',
+                s2: r[idxS2] || '',
+                s3: r[idxS3] || '',
+                s4: r[idxS4] || '',
+                s5: r[idxS5] || '',
+                ans: parseInt(r[idxAns]) || 1,
+                exp: r[idxExp] || '등록된 해설이 없습니다.',
+                term: r[idxTerm] || '미분류',
+                termId: parseInt(r[idxTermId]) || 999
+            });
+        }
+
+        if(masterData.length > 0) {
+            document.getElementById('loading-box').classList.add('hidden');
+            document.getElementById('workspace').classList.remove('hidden');
+            buildTermFilterDropdown();
+            applySettings();
+        } else {
+            alert("파일을 파싱하지 못했습니다. 형식을 확인해 주세요.");
+        }
+    }
+
+    function buildTermFilterDropdown() {
+        const filterSelect = document.getElementById('filter-term');
+        filterSelect.innerHTML = '<option value="all">전체 용어 보기</option>';
+        const uniqueTerms = [...new Set(masterData.map(item => item.term))];
+        uniqueTerms.sort().forEach(term => {
+            if(term) {
+                const opt = document.createElement('option');
+                opt.value = term;
+                opt.textContent = term;
+                filterSelect.appendChild(opt);
+            }
+        });
+    }
+
+    function applySettings() {
+        const sortOrder = document.getElementById('sort-order').value;
+        const filterTerm = document.getElementById('filter-term').value;
+
+        let processed = [...masterData];
+        if (filterTerm !== 'all') {
+            processed = processed.filter(item => item.term === filterTerm);
+        }
+
+        if (sortOrder === 'original') {
+            // 원본 순서 유지
+        } else if (sortOrder === 'serial') {
+            processed.sort((a, b) => a.id - b.id);
+        } else if (sortOrder === 'custom_seq') {
+            processed.sort((a, b) => a.seq - b.seq);
+        } else if (sortOrder === 'theory') {
+            processed.sort((a, b) => a.termId - b.termId || a.id - b.id);
+        } else if (sortOrder === 'term') {
+            processed.sort((a, b) => a.term.localeCompare(b.term) || a.id - b.id);
+        }
+
+        quizList = processed;
+        currentIdx = 0;
+        userAnswers = {};
+
+        buildSidebarIndex();
+        renderCurrentCard();
+        updateGlobalScore();
+    }
+
+    function buildSidebarIndex() {
+        const grid = document.getElementById('index-grid');
+        grid.innerHTML = '';
+        quizList.forEach((q, index) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'index-btn';
+            btn.id = `idx-btn-${index}`;
+            btn.textContent = `N${q.id}(#${q.seq})`;
+            btn.title = `문제번호: ${q.id}, 일련번호: ${q.seq}`;
+            btn.onclick = () => {
+                currentIdx = index;
+                renderCurrentCard();
+            };
+            grid.appendChild(btn);
+        });
+    }
+
+    function renderCurrentCard() {
+        const container = document.getElementById('question-card-container');
+        if (quizList.length === 0) {
+            container.innerHTML = "<p style='padding:30px; text-align:center;'>조건에 부합하는 문항이 없습니다.</p>";
+            return;
+        }
+
+        const q = quizList[currentIdx];
+        
+        document.getElementById('btn-prev').disabled = (currentIdx === 0);
+        document.getElementById('btn-next').disabled = (currentIdx === quizList.length - 1);
+        
+        document.querySelectorAll('.index-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`idx-btn-${currentIdx}`);
+        if(activeBtn) activeBtn.classList.add('active');
+
+        document.getElementById('txt-progress').textContent = `진행 문항: ${currentIdx + 1} / ${quizList.length}`;
+
+        let html = `
+            <div class="card">
+                <div class="q-header">
+                    <span class="q-no">문제번호: No. ${q.id} <span style="color:#e06666; font-size:14px; margin-left:10px;">[지정 일련번호: #${q.seq}]</span></span>
+                    <span class="q-meta">용어분류: ${q.term} (ID: ${q.termId})</span>
+                </div>
+                <div class="q-text">${q.q}</div>
+                <div class="options">
+                    ${[q.s1, q.s2, q.s3, q.s4, q.s5].map((optText, i) => {
+                        if(!optText) return '';
+                        const val = i + 1;
+                        const isChecked = userAnswers[q.id] && userAnswers[q.id].chosen === val ? 'checked' : '';
+                        const itemClass = userAnswers[q.id] && userAnswers[q.id].chosen === val ? 'option-item selected' : 'option-item';
+                        return `
+                            <div class="${itemClass}" onclick="triggerSelect(${q.id}, ${val})">
+                                <input type="radio" name="option-group-${q.id}" id="radio-${q.id}-${val}" value="${val}" ${isChecked}>
+                                <label for="radio-${q.id}-${val}">${val}. ${optText}</label>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="feedback" id="card-feedback-box"></div>
+            </div>
+        `;
+        container.innerHTML = html;
+
+        if (userAnswers[q.id] && userAnswers[q.id].checked) {
+            revealFeedbackDisplay(q);
+        }
+    }
+
+    function triggerSelect(qId, val) {
+        if (userAnswers[qId] && userAnswers[qId].checked) return;
+        const radio = document.getElementById(`radio-${qId}-${val}`);
+        if(radio) {
+            radio.checked = true;
+            const card = radio.closest('.card');
+            card.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
+            radio.closest('.option-item').classList.add('selected');
+            userAnswers[qId] = { chosen: val, checked: false };
+        }
+    }
+
+    function checkAnswer() {
+        if(quizList.length === 0) return;
+        const q = quizList[currentIdx];
+        if (!userAnswers[q.id] || !userAnswers[q.id].chosen) {
+            alert("정답 보기를 선택해 주세요.");
+            return;
+        }
+        userAnswers[q.id].checked = true;
+        revealFeedbackDisplay(q);
+        updateGlobalScore();
+    }
+
+    function revealFeedbackDisplay(q) {
+        const box = document.getElementById('card-feedback-box');
+        const info = userAnswers[q.id];
+        const idxBtn = document.getElementById(`idx-btn-${currentIdx}`);
+
+        if (info.chosen === q.ans) {
+            box.className = "feedback correct";
+            box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
+            if(idxBtn) { idxBtn.classList.remove('solved-wrong'); idxBtn.classList.add('solved-correct'); }
+        } else {
+            box.className = "feedback wrong";
+            box.innerHTML = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
+            if(idxBtn) { idxBtn.classList.remove('solved-correct'); idxBtn.classList.add('solved-wrong'); }
+        }
+
+        box.innerHTML += `
+            <div class="explanation">
+                <strong>💡 [보건의료통계분석 해설]</strong><br>
+                ${q.exp.replace(/\n/g, '<br>')}
+            </div>
+        `;
+    }
+
+    function moveQuestion(step) {
+        currentIdx += step;
+        if(currentIdx < 0) currentIdx = 0;
+        if(currentIdx >= quizList.length) currentIdx = quizList.length - 1;
+        renderCurrentCard();
+    }
+
+    function updateGlobalScore() {
+        let correctCount = 0;
+        let solvedCount = 0;
+        quizList.forEach(q => {
+            if (userAnswers[q.id] && userAnswers[q.id].checked) {
+                solvedCount++;
+                if (userAnswers[q.id].chosen === q.ans) correctCount++;
+            }
+        });
+        document.getElementById('txt-score').textContent = `맞춘 문항: ${correctCount} / ${quizList.length}`;
+        const pct = quizList.length > 0 ? Math.round((solvedCount / quizList.length) * 100) : 0;
+        document.getElementById('score-board').textContent = `풀이 진행도: ${pct}% (${solvedCount} / ${quizList.length})`;
+    }
+</script>
+
+</body>
+</html>
