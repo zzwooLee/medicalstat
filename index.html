@@ -122,6 +122,21 @@
         .q-no { font-weight: bold; color: var(--primary-color); font-size: 18px; }
         .q-meta { background: #eef2f7; padding: 3px 8px; border-radius: 4px; font-size: 12px; color: #555; }
         .q-text { font-size: 17px; font-weight: bold; margin-bottom: 15px; color: #111; }
+        
+        .q-case {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            white-space: pre-line;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14.5px;
+            color: #333;
+            border-radius: 0 6px 6px 0;
+            border: 1px solid #dee2e6;
+            border-left: 5px solid var(--primary-color);
+        }
+
         .options { display: flex; flex-direction: column; gap: 10px; }
         .option-item { display: flex; align-items: center; padding: 10px 15px; background: #fff; border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; }
         .option-item:hover { background: #f1f5fa; }
@@ -160,7 +175,7 @@
                     <select id="sort-order">
                         <option value="original">파일 기록 순서</option>
                         <option value="serial">문제번호 순 (원본 기준)</option>
-                        <option value="custom_seq" selected>★ 추가된 일련번호 열 기준 정렬</option>
+                        <option value="custom_seq" selected>일련번호 기준 정렬</option>
                         <option value="theory">교재 이론 챕터 (용어ID) 순서별</option>
                         <option value="term">매칭 용어 가나다순</option>
                     </select>
@@ -197,7 +212,7 @@
     let currentIdx = 0;
     let userAnswers = {}; 
 
-    // ★ [핵심 기능] 페이지 로드 시 같은 경로의 data.csv 파일을 비동기로 fetch하여 바로 구동
+    // 페이지 로드 시 같은 경로의 data.csv 파일을 비동기로 가져오기
     window.addEventListener('DOMContentLoaded', () => {
         fetch('data.csv')
             .then(response => {
@@ -255,6 +270,7 @@
         const headers = lines[0].map(h => h.replace(/[\ufeff\s]/g, '')); 
         const idxProblemNo = headers.indexOf('문제번호');
         const idxQuestion = headers.indexOf('문제');
+        const idxCase = headers.indexOf('보기'); 
         const idxS1 = headers.indexOf('선택지1');
         const idxS2 = headers.indexOf('선택지2');
         const idxS3 = headers.indexOf('선택지3');
@@ -283,6 +299,7 @@
                 id: parseInt(r[idxProblemNo]) || k, 
                 seq: serialVal,                    
                 q: r[idxQuestion],
+                caseData: idxCase !== -1 ? r[idxCase] : '', 
                 s1: r[idxS1] || '',
                 s2: r[idxS2] || '',
                 s3: r[idxS3] || '',
@@ -385,6 +402,11 @@
 
         document.getElementById('txt-progress').textContent = `진행 문항: ${currentIdx + 1} / ${quizList.length}`;
 
+        let caseHtml = '';
+        if (q.caseData && q.caseData.trim() !== '') {
+            caseHtml = `<div class="q-case"><strong>[보기]</strong><br>${q.caseData}</div>`;
+        }
+
         let html = `
             <div class="card">
                 <div class="q-header">
@@ -392,6 +414,7 @@
                     <span class="q-meta">용어분류: ${q.term} (ID: ${q.termId})</span>
                 </div>
                 <div class="q-text">${q.q}</div>
+                ${caseHtml}
                 <div class="options">
                     ${[q.s1, q.s2, q.s3, q.s4, q.s5].map((optText, i) => {
                         if(!optText) return '';
@@ -418,7 +441,7 @@
 
     function triggerSelect(qId, val) {
         if (userAnswers[qId] && userAnswers[qId].checked) return;
-        const radio = document.getElementById(`radio-${qId}-${val}`);
+        const radio = document.getElementById suicide(`radio-${qId}-${val}`);
         if(radio) {
             radio.checked = true;
             const card = radio.closest('.card');
