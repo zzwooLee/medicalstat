@@ -154,7 +154,6 @@
             color: #333;
             border-radius: 0 6px 6px 0;
             border: 1px solid #dee2e6;
-            border-left: 5px solid var(--primary-color);
             overflow-x: auto;
         }
 
@@ -446,7 +445,7 @@
         let html = `
             <div class="card">
                 <div class="q-header">
-                    <span class="q-no">문제번호: No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
+                    <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
                     <span class="q-meta">${q.term}</span>
                 </div>
                 <div class="q-text">${q.q}</div>
@@ -487,12 +486,10 @@
         }
     }
 
-    // ★ [로직 수정] 보기를 선택하지 않고 정답확인을 누르면 바로 해설을 표시하는 흐름으로 갱신
     function checkAnswer() {
         if(quizList.length === 0) return;
         const q = quizList[currentIdx];
         
-        // 보기를 선택하지 않고 정답 확인을 누른 경우 단순조회 모드로 세팅
         if (!userAnswers[q.id] || !userAnswers[q.id].chosen) {
             userAnswers[q.id] = { chosen: null, checked: true, isJustViewed: true };
         } else {
@@ -510,21 +507,19 @@
         const idxBtn = document.getElementById(`idx-btn-${currentIdx}`);
 
         if (info.isJustViewed) {
-            // 보기를 선택하지 않고 정답확인을 누른 경우: 채점 결과는 비표시, 안내 상자 출력
             box.className = "feedback just-view";
             box.innerHTML = `<strong>📖 정답 및 해설 단순 조회 (정답: ${q.ans}번)</strong>`;
             if(idxBtn) { 
                 idxBtn.className = "index-btn just-viewed"; 
             }
         } else {
-            // 보기를 선택하고 정답확인을 누른 경우: 정상 채점 진행
             if (info.chosen === q.ans) {
                 box.className = "feedback correct";
                 box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
                 if(idxBtn) { idxBtn.className = "index-btn solved-correct"; }
             } else {
                 box.className = "feedback wrong";
-                box.innerHTML = ` = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
+                box.innerHTML = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
                 if(idxBtn) { idxBtn.className = "index-btn solved-wrong"; }
             }
         }
@@ -551,7 +546,6 @@
         let solvedCount = 0;
         quizList.forEach(q => {
             if (userAnswers[q.id] && userAnswers[q.id].checked) {
-                // 단순히 정답 해설만 확인한 문항은 점수 통계(분자/분모) 산정에서 제외
                 if (!userAnswers[q.id].isJustViewed) {
                     solvedCount++;
                     if (userAnswers[q.id].chosen === q.ans) correctCount++;
@@ -559,7 +553,6 @@
             }
         });
         
-        // 전체 진도율은 문제를 풀거나 해설을 그냥 조회한 모든 이력을 합산하여 표기
         let totalInteracted = 0;
         quizList.forEach(q => {
             if (userAnswers[q.id] && userAnswers[q.id].checked) totalInteracted++;
