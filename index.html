@@ -15,6 +15,8 @@
             --correct-bg: #d4edda;
             --wrong-color: #721c24;
             --wrong-bg: #f8d7da;
+            --view-color: #383d41;
+            --view-bg: #e2e3e5;
         }
         body {
             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
@@ -22,13 +24,13 @@
             color: var(--text-color);
             background-color: #f4f6f9;
             margin: 0;
-            padding: 10px; /* 모바일 여백 축소 */
+            padding: 10px;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background: #ffffff;
-            padding: 15px; /* 모바일 패딩 축소 */
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
@@ -38,7 +40,7 @@
             border-bottom: 3px solid var(--primary-color);
             padding-bottom: 12px;
             margin-top: 10px;
-            font-size: 22px; /* 모바일 타이틀 크기 조정 */
+            font-size: 22px;
         }
         .loading-box {
             background: #e2e3e5;
@@ -52,7 +54,6 @@
             font-size: 14px;
         }
         
-        /* 기본 레이아웃: PC 환경 */
         .main-layout {
             display: flex;
             gap: 20px;
@@ -81,7 +82,7 @@
             gap: 6px;
         }
         .index-btn {
-            padding: 8px 2px; /* 터치하기 편하게 세로 패딩 증가 */
+            padding: 8px 2px;
             font-size: 11px;
             text-align: center;
             background: #fff;
@@ -97,10 +98,10 @@
         }
         .index-btn.solved-correct { background: #c3e6cb !important; color: #155724 !important; }
         .index-btn.solved-wrong { background: #f5c6cb !important; color: #721c24 !important; }
+        .index-btn.just-viewed { background: #e2e3e5 !important; color: #383d41 !important; }
 
         .content-area { flex: 3; display: flex; flex-direction: column; min-width: 0; }
         
-        /* 제어판 구조 조정 */
         .control-panel {
             background: var(--secondary-color);
             padding: 15px;
@@ -154,7 +155,7 @@
             border-radius: 0 6px 6px 0;
             border: 1px solid #dee2e6;
             border-left: 5px solid var(--primary-color);
-            overflow-x: auto; /* 표 등 너비 초과 시 스크롤 */
+            overflow-x: auto;
         }
 
         .options { display: flex; flex-direction: column; gap: 10px; }
@@ -167,6 +168,7 @@
         .feedback { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-size: 14px; }
         .feedback.correct { background-color: var(--correct-bg); color: var(--correct-color); border: 1px solid #c3e6cb; display: block; }
         .feedback.wrong { background-color: var(--wrong-bg); color: var(--wrong-color); border: 1px solid #f5c6cb; display: block; }
+        .feedback.just-view { background-color: var(--view-bg); color: var(--view-color); border: 1px solid #d6d8db; display: block; }
         .explanation { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 13.5px; color: #444; word-break: keep-all; }
         
         .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px; gap: 8px; }
@@ -174,21 +176,16 @@
         .score-board { text-align: center; margin-top: 15px; padding: 12px; background: #eef2f7; border-radius: 8px; font-weight: bold; font-size: 13px; }
         .hidden { display: none !important; }
 
-        /* 📱 스마트폰 및 패드 전용 반응형 미디어 쿼리 구조 */
         @media (max-width: 850px) {
             body { padding: 5px; }
             .container { padding: 10px; border-radius: 8px; }
             h1 { font-size: 18px; }
-            
-            /* 사이드바를 아래쪽 배치 구조로 뒤집기 */
             .main-layout { flex-direction: column; }
             .content-area { order: 1; }
             .sidebar { order: 2; max-width: 100%; max-height: 300px; margin-top: 10px; }
-            
-            .index-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; } /* 모바일에서 더 촘촘하게 배열 */
+            .index-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
             .control-panel { grid-template-columns: 1fr; gap: 10px; }
             .q-header { flex-direction: column; align-items: flex-start; }
-            
             .option-item { padding: 12px 12px; }
             .option-item label { font-size: 13.5px; }
         }
@@ -413,7 +410,7 @@
             btn.type = 'button';
             btn.className = 'index-btn';
             btn.id = `idx-btn-${index}`;
-            btn.textContent = `${q.id}`; // 모바일 가독성을 위해 버튼 텍스트를 심플하게 축소
+            btn.textContent = `${q.id}`; 
             btn.title = `문제번호: ${q.id}, 일련번호: ${q.seq}`;
             btn.onclick = () => {
                 currentIdx = index;
@@ -449,7 +446,7 @@
         let html = `
             <div class="card">
                 <div class="q-header">
-                    <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
+                    <span class="q-no">문제번호: No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
                     <span class="q-meta">${q.term}</span>
                 </div>
                 <div class="q-text">${q.q}</div>
@@ -486,18 +483,23 @@
             const card = radio.closest('.card');
             card.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
             radio.closest('.option-item').classList.add('selected');
-            userAnswers[qId] = { chosen: val, checked: false };
+            userAnswers[qId] = { chosen: val, checked: false, isJustViewed: false };
         }
     }
 
+    // ★ [로직 수정] 보기를 선택하지 않고 정답확인을 누르면 바로 해설을 표시하는 흐름으로 갱신
     function checkAnswer() {
         if(quizList.length === 0) return;
         const q = quizList[currentIdx];
+        
+        // 보기를 선택하지 않고 정답 확인을 누른 경우 단순조회 모드로 세팅
         if (!userAnswers[q.id] || !userAnswers[q.id].chosen) {
-            alert("정답 보기를 선택해 주세요.");
-            return;
+            userAnswers[q.id] = { chosen: null, checked: true, isJustViewed: true };
+        } else {
+            userAnswers[q.id].checked = true;
+            userAnswers[q.id].isJustViewed = false;
         }
-        userAnswers[q.id].checked = true;
+
         revealFeedbackDisplay(q);
         updateGlobalScore();
     }
@@ -507,14 +509,24 @@
         const info = userAnswers[q.id];
         const idxBtn = document.getElementById(`idx-btn-${currentIdx}`);
 
-        if (info.chosen === q.ans) {
-            box.className = "feedback correct";
-            box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
-            if(idxBtn) { idxBtn.classList.remove('solved-wrong'); idxBtn.classList.add('solved-correct'); }
+        if (info.isJustViewed) {
+            // 보기를 선택하지 않고 정답확인을 누른 경우: 채점 결과는 비표시, 안내 상자 출력
+            box.className = "feedback just-view";
+            box.innerHTML = `<strong>📖 정답 및 해설 단순 조회 (정답: ${q.ans}번)</strong>`;
+            if(idxBtn) { 
+                idxBtn.className = "index-btn just-viewed"; 
+            }
         } else {
-            box.className = "feedback wrong";
-            box.innerHTML = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
-            if(idxBtn) { idxBtn.classList.remove('solved-correct'); idxBtn.classList.add('solved-wrong'); }
+            // 보기를 선택하고 정답확인을 누른 경우: 정상 채점 진행
+            if (info.chosen === q.ans) {
+                box.className = "feedback correct";
+                box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
+                if(idxBtn) { idxBtn.className = "index-btn solved-correct"; }
+            } else {
+                box.className = "feedback wrong";
+                box.innerHTML = ` = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
+                if(idxBtn) { idxBtn.className = "index-btn solved-wrong"; }
+            }
         }
 
         box.innerHTML += `
@@ -524,7 +536,6 @@
             </div>
         `;
         
-        // 정답 확인 시 스크롤을 부드럽게 아래로 이동시켜 해설창이 보이도록 편의 제공
         box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
@@ -540,13 +551,23 @@
         let solvedCount = 0;
         quizList.forEach(q => {
             if (userAnswers[q.id] && userAnswers[q.id].checked) {
-                solvedCount++;
-                if (userAnswers[q.id].chosen === q.ans) correctCount++;
+                // 단순히 정답 해설만 확인한 문항은 점수 통계(분자/분모) 산정에서 제외
+                if (!userAnswers[q.id].isJustViewed) {
+                    solvedCount++;
+                    if (userAnswers[q.id].chosen === q.ans) correctCount++;
+                }
             }
         });
-        document.getElementById('txt-score').textContent = `맞춘 문항: ${correctCount} / ${quizList.length}`;
-        const pct = quizList.length > 0 ? Math.round((solvedCount / quizList.length) * 100) : 0;
-        document.getElementById('score-board').textContent = `풀이 진행도: ${pct}% (${solvedCount} / ${quizList.length})`;
+        
+        // 전체 진도율은 문제를 풀거나 해설을 그냥 조회한 모든 이력을 합산하여 표기
+        let totalInteracted = 0;
+        quizList.forEach(q => {
+            if (userAnswers[q.id] && userAnswers[q.id].checked) totalInteracted++;
+        });
+
+        document.getElementById('txt-score').textContent = `맞춘 개수: ${correctCount} 문항`;
+        const pct = quizList.length > 0 ? Math.round((totalInteracted / quizList.length) * 100) : 0;
+        document.getElementById('score-board').textContent = `풀이 진행도: ${pct}% (${totalInteracted} / ${quizList.length})`;
     }
 </script>
 
