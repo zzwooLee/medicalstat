@@ -314,7 +314,10 @@
         const idxS4 = headers.indexOf('선택지4');
         const idxS5 = headers.indexOf('선택지5');
         const idxAns = headers.indexOf('정답');
-        const idxExp = headers.indexOf('해설_임시');
+        
+        /* ★ [유연한 매핑 업데이트] 변경된 '해설' 또는 기존 '해설_임시' 모두 자동으로 찾아내도록 보완 */
+        let idxExp = headers.indexOf('해설');
+        if (idxExp === -1) idxExp = headers.indexOf('해설_임시');
         
         let idxTerm = headers.indexOf('용어');
         if (idxTerm === -1) idxTerm = headers.indexOf('매칭용어(1개)');
@@ -342,7 +345,7 @@
                 s4: r[idxS4] || '',
                 s5: r[idxS5] || '',
                 ans: parseInt(r[idxAns]) || 1,
-                exp: r[idxExp] || '등록된 해설이 없습니다.',
+                exp: idxExp !== -1 ? r[idxExp] : '등록된 해설이 없습니다.',
                 term: idxTerm !== -1 ? r[idxTerm] : '미분류',
                 termId: idxTermId !== -1 ? parseInt(r[idxTermId]) : 999
             });
