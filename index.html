@@ -335,9 +335,12 @@
         const idxTermId = headers.indexOf('용어ID');
         const idxSerialNo = headers.indexOf('일련번호');
         
-        // ★ [기준 수정] CSV 파일 내 명시된 'Chapter' 열의 인덱스를 찾습니다.
         let idxChapter = headers.indexOf('Chapter');
         if (idxChapter === -1) idxChapter = headers.indexOf('chapter');
+
+        // ★ [새 구성 확장] 교수님께서 추가해주신 'Level' 컬럼 추적 연동
+        let idxLevel = headers.indexOf('Level');
+        if (idxLevel === -1) idxLevel = headers.indexOf('level');
 
         for (let k = 1; k < lines.length; k++) {
             const r = lines[k];
@@ -348,10 +351,7 @@
                 serialVal = parseInt(r[idxProblemNo]) || k;
             }
 
-            // ★ [연동 로직 수정] 용어ID 연산 대신 'Chapter' 열에 적힌 숫자 데이터를 직접 수집
             let rawChapterVal = idxChapter !== -1 ? parseInt(r[idxChapter]) : null;
-            
-            // 만약 Chapter 열에 값이 없거나 비어 있다면 기존 용어ID 백의자리 연산법을 예외방지 보조책으로 활용
             if (isNaN(rawChapterVal) || rawChapterVal === null) {
                 let rawTermId = idxTermId !== -1 ? parseInt(r[idxTermId]) : 999;
                 rawChapterVal = Math.floor(rawTermId / 100);
@@ -372,7 +372,8 @@
                 exp: idxExp !== -1 ? r[idxExp] : '등록된 해설이 없습니다.',
                 term: idxTerm !== -1 ? r[idxTerm] : '미분류',
                 termId: idxTermId !== -1 ? parseInt(r[idxTermId]) : 999,
-                chapter: rawChapterVal // 최종 챕터 숫자 확정
+                chapter: rawChapterVal,
+                level: idxLevel !== -1 ? r[idxLevel].trim() : '' // Level 데이터 바인딩
             });
         }
 
@@ -390,7 +391,6 @@
         const chSelect = document.getElementById('filter-chapter');
         chSelect.innerHTML = '<option value="all">전체 단원 보기</option>';
         
-        // 데이터상에 들어 있는 고유 챕터 번호들을 추출하여 정렬 후 메뉴에 반영
         const uniqueChapters = [...new Set(masterData.map(item => item.chapter))];
         uniqueChapters.sort((a, b) => a - b).forEach(ch => {
             if(ch) {
@@ -505,11 +505,18 @@
             caseHtml = `<div class="q-case">${escapeHtml(q.caseData.trim())}</div>`;
         }
 
+        // ★ [Level 화면 표기 고도화] q-meta 영역에 Chapter, Level(난이도), 용어가 함께 나란히 출력되도록 설정
+        let metaText = q.chapter < 10 ? 'Chapter 0' + q.chapter : 'Chapter ' + q.chapter;
+        if (q.level) {
+            metaText += ` | Level ${escapeHtml(q.level)}`;
+        }
+        metaText += ` | ${escapeHtml(q.term)}`;
+
         let html = `
             <div class="card">
                 <div class="q-header">
                     <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
-                    <span class="q-meta">${q.chapter < 10 ? 'Chapter 0' + q.chapter : 'Chapter ' + q.chapter} | ${escapeHtml(q.term)}</span>
+                    <span class="q-meta">${metaText}</span>
                 </div>
                 <div class="q-text">${safeQuestion}</div>
                 ${caseHtml}
@@ -530,9 +537,10 @@
         }
     }
 
+    // ★ [버그 해결] 이전 오타 수치 완벽 복구
     function triggerSelect(qId, val) {
         if (userAnswers[qId] && userAnswers[qId].checked) return;
-        const radio = document.getElementById suicide(`radio-${qId}-${val}`);
+        const radio = document.getElementById(`radio-${qId}-${val}`);
         if(radio) {
             radio.checked = true;
             const card = radio.closest('.card');
@@ -557,6 +565,7 @@
         updateGlobalScore();
     }
 
+    // ★ [버그 해결] 오답 연동 문자열 깨짐 완벽 조치
     function revealFeedbackDisplay(q) {
         const box = document.getElementById('card-feedback-box');
         const info = userAnswers[q.id];
