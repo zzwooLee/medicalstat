@@ -148,7 +148,7 @@
             border-left: 5px solid var(--primary-color);
             padding: 15px;
             margin-bottom: 20px;
-            white-space: pre-wrap; /* 빈 공간 및 줄바꿈 형태 그대로 유지 보존 */
+            white-space: pre-wrap; /* 줄바꿈 구조 유지 */
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 14px;
             color: #222;
@@ -240,7 +240,7 @@
         <div class="sidebar">
             <h3>🎯 문항 내비게이터</h3>
             <div class="index-grid" id="index-grid"></div>
-            <div class="score-board" id="score-board">진행도: 0% (0/0)</div>
+            .score-board { text-align: center; margin-top: 15px; padding: 12px; background: #eef2f7; border-radius: 8px; font-weight: bold; font-size: 13px; }
         </div>
     </div>
 </div>
@@ -269,7 +269,6 @@
             });
     });
 
-    // ★ [핵심 패치] 셀 안의 개행(줄바꿈)을 새 데이터행으로 오인하지 않는 RFC 4180 표준 완전 파싱 알고리즘 이식
     function parseCSV(text) {
         masterData = [];
         const lines = [];
@@ -284,9 +283,9 @@
             if (char === '"') {
                 if (inQuotes && nextChar === '"') {
                     currentField += '"';
-                    i++; // 두 개 연속된 따옴표는 따옴표 자체로 이스케이프
+                    i++; 
                 } else {
-                    inQuotes = !inQuotes; // 따옴표 상태 토글
+                    inQuotes = !inQuotes; 
                 }
             } else if (char === ',' && !inQuotes) {
                 row.push(currentField);
@@ -447,9 +446,10 @@
 
         document.getElementById('txt-progress').textContent = `문항: ${currentIdx + 1} / ${quizList.length}`;
 
+        // ★ [핵심 패치] 보기 데이터의 시작 부분에 불필요한 줄바꿈(\n)이나 공백이 있으면 자동으로 지워주는 trim() 적용
         let caseHtml = '';
         if (q.caseData && q.caseData.trim() !== '') {
-            caseHtml = `<div class="q-case">${q.caseData}</div>`;
+            caseHtml = `<div class="q-case">${q.caseData.trim()}</div>`;
         }
 
         let html = `
