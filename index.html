@@ -113,8 +113,8 @@
             gap: 12px;
             align-items: flex-end;
         }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        .control-group label { font-weight: bold; font-size: 13px; }
+        .control-panel-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-panel-group label { font-weight: bold; font-size: 13px; }
         select, button { padding: 12px; font-size: 14px; border-radius: 6px; border: 1px solid var(--border-color); }
         select { background-color: #fff; width: 100%; height: 45px; }
         
@@ -148,7 +148,7 @@
             border-left: 5px solid var(--primary-color);
             padding: 15px;
             margin-bottom: 20px;
-            white-space: pre-wrap; /* 줄바꿈 구조 유지 */
+            white-space: pre-wrap; 
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 14px;
             color: #222;
@@ -203,7 +203,7 @@
     <div id="workspace" class="main-layout hidden">
         <div class="content-area">
             <div class="control-panel">
-                <div class="control-group">
+                <div class="control-panel-group">
                     <label for="sort-order">📌 정렬 및 진도 분류</label>
                     <select id="sort-order">
                         <option value="original">파일 기록 순서</option>
@@ -213,7 +213,7 @@
                         <option value="term">매칭 용어 가나다순</option>
                     </select>
                 </div>
-                <div class="control-group">
+                <div class="control-panel-group">
                     <label for="filter-term">🔍 특정 용어 묶어보기</label>
                     <select id="filter-term">
                         <option value="all">전체 용어 보기</option>
@@ -225,7 +225,7 @@
             <div id="quiz-area">
                 <div class="quiz-status">
                     <span id="txt-progress">로딩 중...</span>
-                    <span id="txt-score">맞춘 개수: 0 / 0</span>
+                    <span id="txt-score">맞춘 개수: 0 문항</span>
                 </div>
                 <div id="question-card-container"></div>
                 
@@ -240,7 +240,7 @@
         <div class="sidebar">
             <h3>🎯 문항 내비게이터</h3>
             <div class="index-grid" id="index-grid"></div>
-            .score-board { text-align: center; margin-top: 15px; padding: 12px; background: #eef2f7; border-radius: 8px; font-weight: bold; font-size: 13px; }
+            <div class="score-board" id="score-board">진행도: 0% (0 / 0)</div>
         </div>
     </div>
 </div>
@@ -428,6 +428,17 @@
         });
     }
 
+    // ★ [보안 강화 헬퍼] 꺾쇠 기호를 브라우저 무력화 텍스트(&lt; 및 &gt;)로 수치 변환하여 안전하게 노출하는 함수
+    function escapeHtml(string) {
+        if(!string) return '';
+        return String(string)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderCurrentCard() {
         const container = document.getElementById('question-card-container');
         if (quizList.length === 0) {
@@ -446,133 +457,28 @@
 
         document.getElementById('txt-progress').textContent = `문항: ${currentIdx + 1} / ${quizList.length}`;
 
-        // ★ [핵심 패치] 보기 데이터의 시작 부분에 불필요한 줄바꿈(\n)이나 공백이 있으면 자동으로 지워주는 trim() 적용
+        // ★ [원인 패치] 문제, 보기, 보기 선택지, 해설 내 모든 기호를 HTML 이스케이프 함수에 통과시켜 온전히 글자로 변환
+        let safeQuestion = escapeHtml(q.q);
+        let safeS1 = escapeHtml(q.s1);
+        let safeS2 = escapeHtml(q.s2);
+        let safeS3 = escapeHtml(q.s3);
+        let safeS4 = escapeHtml(q.s4);
+        let safeS5 = escapeHtml(q.s5);
+
         let caseHtml = '';
         if (q.caseData && q.caseData.trim() !== '') {
-            caseHtml = `<div class="q-case">${q.caseData.trim()}</div>`;
+            caseHtml = `<div class="q-case">${escapeHtml(q.caseData.trim())}</div>`;
         }
 
         let html = `
             <div class="card">
                 <div class="q-header">
                     <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
-                    <span class="q-meta">${q.term}</span>
+                    <span class="q-meta">${escapeHtml(q.term)}</span>
                 </div>
-                <div class="q-text">${q.q}</div>
+                <div class="q-text">${safeQuestion}</div>
                 ${caseHtml}
                 <div class="options">
-                    ${[q.s1, q.s2, q.s3, q.s4, q.s5].map((optText, i) => {
-                        if(!optText) return '';
-                        const val = i + 1;
-                        const isChecked = userAnswers[q.id] && userAnswers[q.id].chosen === val ? 'checked' : '';
-                        const itemClass = userAnswers[q.id] && userAnswers[q.id].chosen === val ? 'option-item selected' : 'option-item';
-                        return `
-                            <div class="${itemClass}" onclick="triggerSelect(${q.id}, ${val})">
-                                <input type="radio" name="option-group-${q.id}" id="radio-${q.id}-${val}" value="${val}" ${isChecked}>
-                                <label for="radio-${q.id}-${val}">${val}. ${optText}</label>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="feedback" id="card-feedback-box"></div>
-            </div>
-        `;
-        container.innerHTML = html;
-
-        if (userAnswers[q.id] && userAnswers[q.id].checked) {
-            revealFeedbackDisplay(q);
-        }
-    }
-
-    function triggerSelect(qId, val) {
-        if (userAnswers[qId] && userAnswers[qId].checked) return;
-        const radio = document.getElementById(`radio-${qId}-${val}`);
-        if(radio) {
-            radio.checked = true;
-            const card = radio.closest('.card');
-            card.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
-            radio.closest('.option-item').classList.add('selected');
-            userAnswers[qId] = { chosen: val, checked: false, isJustViewed: false };
-        }
-    }
-
-    function checkAnswer() {
-        if(quizList.length === 0) return;
-        const q = quizList[currentIdx];
-        
-        if (!userAnswers[q.id] || !userAnswers[q.id].chosen) {
-            userAnswers[q.id] = { chosen: null, checked: true, isJustViewed: true };
-        } else {
-            userAnswers[q.id].checked = true;
-            userAnswers[q.id].isJustViewed = false;
-        }
-
-        revealFeedbackDisplay(q);
-        updateGlobalScore();
-    }
-
-    function revealFeedbackDisplay(q) {
-        const box = document.getElementById('card-feedback-box');
-        const info = userAnswers[q.id];
-        const idxBtn = document.getElementById(`idx-btn-${currentIdx}`);
-
-        if (info.isJustViewed) {
-            box.className = "feedback just-view";
-            box.innerHTML = `<strong>📖 정답 및 해설 단순 조회 (정답: ${q.ans}번)</strong>`;
-            if(idxBtn) { 
-                idxBtn.className = "index-btn just-viewed"; 
-            }
-        } else {
-            if (info.chosen === q.ans) {
-                box.className = "feedback correct";
-                box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
-                if(idxBtn) { idxBtn.className = "index-btn solved-correct"; }
-            } else {
-                box.className = "feedback wrong";
-                box.innerHTML = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
-                if(idxBtn) { idxBtn.className = "index-btn solved-wrong"; }
-            }
-        }
-
-        box.innerHTML += `
-            <div class="explanation">
-                <strong>💡 [보건의료통계분석 해설]</strong><br>
-                ${q.exp.replace(/\n/g, '<br>')}
-            </div>
-        `;
-        
-        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function moveQuestion(step) {
-        currentIdx += step;
-        if(currentIdx < 0) currentIdx = 0;
-        if(currentIdx >= quizList.length) currentIdx = quizList.length - 1;
-        renderCurrentCard();
-    }
-
-    function updateGlobalScore() {
-        let correctCount = 0;
-        let solvedCount = 0;
-        quizList.forEach(q => {
-            if (userAnswers[q.id] && userAnswers[q.id].checked) {
-                if (!userAnswers[q.id].isJustViewed) {
-                    solvedCount++;
-                    if (userAnswers[q.id].chosen === q.ans) correctCount++;
-                }
-            }
-        });
-        
-        let totalInteracted = 0;
-        quizList.forEach(q => {
-            if (userAnswers[q.id] && userAnswers[q.id].checked) totalInteracted++;
-        });
-
-        document.getElementById('txt-score').textContent = `맞춘 개수: ${correctCount} 문항`;
-        const pct = quizList.length > 0 ? Math.round((totalInteracted / quizList.length) * 100) : 0;
-        document.getElementById('score-board').textContent = `풀이 진행도: ${pct}% (${totalInteracted} / ${quizList.length})`;
-    }
-</script>
-
-</body>
-</html>
+                    ${safeS1 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 1)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-1" value="1"><label for="radio-${q.id}-1">1. ${safeS1}</label></div>` : ''}
+                    ${safeS2 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 2)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-2" value="2"><label for="radio-${q.id}-2">2. ${safeS2}</label></div>` : ''}
+                    ${safeS3 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 3)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-3" value="3"><label for="radio-${q.id}-3">3. ${safeS3
