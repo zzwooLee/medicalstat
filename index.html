@@ -109,7 +109,7 @@
             margin-bottom: 20px;
             border: 1px solid var(--border-color);
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 12px;
             align-items: flex-end;
         }
@@ -154,7 +154,6 @@
             color: #222;
             border-radius: 0 6px 6px 0;
             border: 1px solid #dee2e6;
-            border-left: 5px solid var(--primary-color);
             overflow-x: auto;
         }
 
@@ -204,13 +203,18 @@
         <div class="content-area">
             <div class="control-panel">
                 <div class="control-panel-group">
-                    <label for="sort-order">📌 정렬 및 진도 분류</label>
+                    <label for="sort-order">📌 정렬 기준</label>
                     <select id="sort-order">
                         <option value="original">파일 기록 순서</option>
-                        <option value="serial">문제번호 순 (원본 기준)</option>
+                        <option value="serial">문제번호 순 정렬</option>
                         <option value="custom_seq" selected>일련번호 기준 정렬</option>
-                        <option value="theory">교재 이론 챕터 (용어ID) 순서별</option>
-                        <option value="term">매칭 용어 가나다순</option>
+                        <option value="term">용어 가나다순 정렬</option>
+                    </select>
+                </div>
+                <div class="control-panel-group">
+                    <label for="filter-chapter">📂 Chapter 별 묶어보기</label>
+                    <select id="filter-chapter">
+                        <option value="all">전체 단원 보기</option>
                     </select>
                 </div>
                 <div class="control-panel-group">
@@ -340,6 +344,11 @@
                 serialVal = parseInt(r[idxProblemNo]) || k;
             }
 
+            // 용어ID를 분석하여 소속 Chapter 자동 산출 연동 (100번대 -> Ch 1, 200번대 -> Ch 2 등)
+            let rawTermId = idxTermId !== -1 ? parseInt(r[idxTermId]) : 999;
+            let chNum = Math.floor(rawTermId / 100);
+            if (isNaN(chNum) || chNum === 0) chNum = 1; // 예외방지 기본값
+
             masterData.push({
                 id: parseInt(r[idxProblemNo]) || k, 
                 seq: serialVal,                    
@@ -353,39 +362,63 @@
                 ans: parseInt(r[idxAns]) || 1,
                 exp: idxExp !== -1 ? r[idxExp] : '등록된 해설이 없습니다.',
                 term: idxTerm !== -1 ? r[idxTerm] : '미분류',
-                termId: idxTermId !== -1 ? parseInt(r[idxTermId]) : 999
+                termId: rawTermId,
+                chapter: chNum // 산출된 단원 번호 매핑
             });
         }
 
         if(masterData.length > 0) {
             document.getElementById('loading-box').classList.add('hidden');
             document.getElementById('workspace').classList.remove('hidden');
-            buildTermFilterDropdown();
+            buildFilterDropdowns(); // 필터 박스 동적 활성화
             applySettings();
         } else {
             alert("파일을 파싱하지 못했습니다. 형식을 확인해 주세요.");
         }
     }
 
-    function buildTermFilterDropdown() {
-        const filterSelect = document.getElementById('filter-term');
-        filterSelect.innerHTML = '<option value="all">전체 용어 보기</option>';
+    // ★ [기능 고도화] Chapter 목록과 용어 목록을 파일 데이터를 읽어 실시간으로 분류하는 발생기
+    function buildFilterDropdowns() {
+        // 1. Chapter 대단원 필터 리스트 동적 구성
+        const chSelect = document.getElementById('filter-chapter');
+        chSelect.innerHTML = '<option value="all">전체 단원 보기</option>';
+        const uniqueChapters = [...new Set(masterData.map(item => item.chapter))];
+        uniqueChapters.sort((a, b) => a - b).forEach(ch => {
+            if(ch && ch < 10) { // 정상 범위의 챕터 필터 추가
+                const opt = document.createElement('option');
+                opt.value = ch;
+                opt.textContent = `Chapter 0${ch}`;
+                chSelect.appendChild(opt);
+            }
+        });
+
+        // 2. 고유 통계 용어 필터 리스트 구성
+        const termSelect = document.getElementById('filter-term');
+        termSelect.innerHTML = '<option value="all">전체 용어 보기</option>';
         const uniqueTerms = [...new Set(masterData.map(item => item.term))];
         uniqueTerms.sort().forEach(term => {
             if(term) {
                 const opt = document.createElement('option');
                 opt.value = term;
                 opt.textContent = term;
-                filterSelect.appendChild(opt);
+                termSelect.appendChild(opt);
             }
         });
     }
 
     function applySettings() {
         const sortOrder = document.getElementById('sort-order').value;
+        const filterChapter = document.getElementById('filter-chapter').value;
         const filterTerm = document.getElementById('filter-term').value;
 
         let processed = [...masterData];
+        
+        // ★ [다중 필터] Chapter 선택값 조건부 추출 필터링 추가
+        if (filterChapter !== 'all') {
+            processed = processed.filter(item => item.chapter === parseInt(filterChapter));
+        }
+        
+        // 용어 선택값 조건부 필터링
         if (filterTerm !== 'all') {
             processed = processed.filter(item => item.term === filterTerm);
         }
@@ -395,8 +428,6 @@
             processed.sort((a, b) => a.id - b.id);
         } else if (sortOrder === 'custom_seq') {
             processed.sort((a, b) => a.seq - b.seq);
-        } else if (sortOrder === 'theory') {
-            processed.sort((a, b) => a.termId - b.termId || a.id - b.id);
         } else if (sortOrder === 'term') {
             processed.sort((a, b) => a.term.localeCompare(b.term) || a.id - b.id);
         }
@@ -428,7 +459,6 @@
         });
     }
 
-    // ★ [보안 강화 헬퍼] 꺾쇠 기호를 브라우저 무력화 텍스트(&lt; 및 &gt;)로 수치 변환하여 안전하게 노출하는 함수
     function escapeHtml(string) {
         if(!string) return '';
         return String(string)
@@ -457,7 +487,6 @@
 
         document.getElementById('txt-progress').textContent = `문항: ${currentIdx + 1} / ${quizList.length}`;
 
-        // ★ [원인 패치] 문제, 보기, 보기 선택지, 해설 내 모든 기호를 HTML 이스케이프 함수에 통과시켜 온전히 글자로 변환
         let safeQuestion = escapeHtml(q.q);
         let safeS1 = escapeHtml(q.s1);
         let safeS2 = escapeHtml(q.s2);
@@ -474,7 +503,7 @@
             <div class="card">
                 <div class="q-header">
                     <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
-                    <span class="q-meta">${escapeHtml(q.term)}</span>
+                    <span class="q-meta">Chapter 0${q.chapter} | ${escapeHtml(q.term)}</span>
                 </div>
                 <div class="q-text">${safeQuestion}</div>
                 ${caseHtml}
