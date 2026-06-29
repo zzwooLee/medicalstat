@@ -334,6 +334,10 @@
         
         const idxTermId = headers.indexOf('용어ID');
         const idxSerialNo = headers.indexOf('일련번호');
+        
+        // ★ [기준 수정] CSV 파일 내 명시된 'Chapter' 열의 인덱스를 찾습니다.
+        let idxChapter = headers.indexOf('Chapter');
+        if (idxChapter === -1) idxChapter = headers.indexOf('chapter');
 
         for (let k = 1; k < lines.length; k++) {
             const r = lines[k];
@@ -344,10 +348,15 @@
                 serialVal = parseInt(r[idxProblemNo]) || k;
             }
 
-            // 용어ID를 분석하여 소속 Chapter 자동 산출 연동 (100번대 -> Ch 1, 200번대 -> Ch 2 등)
-            let rawTermId = idxTermId !== -1 ? parseInt(r[idxTermId]) : 999;
-            let chNum = Math.floor(rawTermId / 100);
-            if (isNaN(chNum) || chNum === 0) chNum = 1; // 예외방지 기본값
+            // ★ [연동 로직 수정] 용어ID 연산 대신 'Chapter' 열에 적힌 숫자 데이터를 직접 수집
+            let rawChapterVal = idxChapter !== -1 ? parseInt(r[idxChapter]) : null;
+            
+            // 만약 Chapter 열에 값이 없거나 비어 있다면 기존 용어ID 백의자리 연산법을 예외방지 보조책으로 활용
+            if (isNaN(rawChapterVal) || rawChapterVal === null) {
+                let rawTermId = idxTermId !== -1 ? parseInt(r[idxTermId]) : 999;
+                rawChapterVal = Math.floor(rawTermId / 100);
+                if (isNaN(rawChapterVal) || rawChapterVal === 0) rawChapterVal = 1;
+            }
 
             masterData.push({
                 id: parseInt(r[idxProblemNo]) || k, 
@@ -362,37 +371,36 @@
                 ans: parseInt(r[idxAns]) || 1,
                 exp: idxExp !== -1 ? r[idxExp] : '등록된 해설이 없습니다.',
                 term: idxTerm !== -1 ? r[idxTerm] : '미분류',
-                termId: rawTermId,
-                chapter: chNum // 산출된 단원 번호 매핑
+                termId: idxTermId !== -1 ? parseInt(r[idxTermId]) : 999,
+                chapter: rawChapterVal // 최종 챕터 숫자 확정
             });
         }
 
         if(masterData.length > 0) {
             document.getElementById('loading-box').classList.add('hidden');
             document.getElementById('workspace').classList.remove('hidden');
-            buildFilterDropdowns(); // 필터 박스 동적 활성화
+            buildFilterDropdowns(); 
             applySettings();
         } else {
             alert("파일을 파싱하지 못했습니다. 형식을 확인해 주세요.");
         }
     }
 
-    // ★ [기능 고도화] Chapter 목록과 용어 목록을 파일 데이터를 읽어 실시간으로 분류하는 발생기
     function buildFilterDropdowns() {
-        // 1. Chapter 대단원 필터 리스트 동적 구성
         const chSelect = document.getElementById('filter-chapter');
         chSelect.innerHTML = '<option value="all">전체 단원 보기</option>';
+        
+        // 데이터상에 들어 있는 고유 챕터 번호들을 추출하여 정렬 후 메뉴에 반영
         const uniqueChapters = [...new Set(masterData.map(item => item.chapter))];
         uniqueChapters.sort((a, b) => a - b).forEach(ch => {
-            if(ch && ch < 10) { // 정상 범위의 챕터 필터 추가
+            if(ch) {
                 const opt = document.createElement('option');
                 opt.value = ch;
-                opt.textContent = `Chapter 0${ch}`;
+                opt.textContent = ch < 10 ? `Chapter 0${ch}` : `Chapter ${ch}`;
                 chSelect.appendChild(opt);
             }
         });
 
-        // 2. 고유 통계 용어 필터 리스트 구성
         const termSelect = document.getElementById('filter-term');
         termSelect.innerHTML = '<option value="all">전체 용어 보기</option>';
         const uniqueTerms = [...new Set(masterData.map(item => item.term))];
@@ -413,12 +421,10 @@
 
         let processed = [...masterData];
         
-        // ★ [다중 필터] Chapter 선택값 조건부 추출 필터링 추가
         if (filterChapter !== 'all') {
             processed = processed.filter(item => item.chapter === parseInt(filterChapter));
         }
         
-        // 용어 선택값 조건부 필터링
         if (filterTerm !== 'all') {
             processed = processed.filter(item => item.term === filterTerm);
         }
@@ -503,7 +509,7 @@
             <div class="card">
                 <div class="q-header">
                     <span class="q-no">No. ${q.id} <span style="color:#e06666; font-size:12px; margin-left:5px;">[일련번호: #${q.seq}]</span></span>
-                    <span class="q-meta">Chapter 0${q.chapter} | ${escapeHtml(q.term)}</span>
+                    <span class="q-meta">${q.chapter < 10 ? 'Chapter 0' + q.chapter : 'Chapter ' + q.chapter} | ${escapeHtml(q.term)}</span>
                 </div>
                 <div class="q-text">${safeQuestion}</div>
                 ${caseHtml}
@@ -526,7 +532,7 @@
 
     function triggerSelect(qId, val) {
         if (userAnswers[qId] && userAnswers[qId].checked) return;
-        const radio = document.getElementById(`radio-${qId}-${val}`);
+        const radio = document.getElementById suicide(`radio-${qId}-${val}`);
         if(radio) {
             radio.checked = true;
             const card = radio.closest('.card');
