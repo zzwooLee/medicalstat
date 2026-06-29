@@ -481,4 +481,107 @@
                 <div class="options">
                     ${safeS1 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 1)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-1" value="1"><label for="radio-${q.id}-1">1. ${safeS1}</label></div>` : ''}
                     ${safeS2 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 2)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-2" value="2"><label for="radio-${q.id}-2">2. ${safeS2}</label></div>` : ''}
-                    ${safeS3 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 3)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-3" value="3"><label for="radio-${q.id}-3">3. ${safeS3
+                    ${safeS3 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 3)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-3" value="3"><label for="radio-${q.id}-3">3. ${safeS3}</label></div>` : ''}
+                    ${safeS4 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 4)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-4" value="4"><label for="radio-${q.id}-4">4. ${safeS4}</label></div>` : ''}
+                    ${safeS5 ? `<div class="option-item" onclick="triggerSelect(${q.id}, 5)"><input type="radio" name="option-group-${q.id}" id="radio-${q.id}-5" value="5"><label for="radio-${q.id}-5">5. ${safeS5}</label></div>` : ''}
+                </div>
+                <div class="feedback" id="card-feedback-box"></div>
+            </div>
+        `;
+        container.innerHTML = html;
+
+        if (userAnswers[q.id] && userAnswers[q.id].checked) {
+            revealFeedbackDisplay(q);
+        }
+    }
+
+    function triggerSelect(qId, val) {
+        if (userAnswers[qId] && userAnswers[qId].checked) return;
+        const radio = document.getElementById(`radio-${qId}-${val}`);
+        if(radio) {
+            radio.checked = true;
+            const card = radio.closest('.card');
+            card.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
+            radio.closest('.option-item').classList.add('selected');
+            userAnswers[qId] = { chosen: val, checked: false, isJustViewed: false };
+        }
+    }
+
+    function checkAnswer() {
+        if(quizList.length === 0) return;
+        const q = quizList[currentIdx];
+        
+        if (!userAnswers[q.id] || !userAnswers[q.id].chosen) {
+            userAnswers[q.id] = { chosen: null, checked: true, isJustViewed: true };
+        } else {
+            userAnswers[q.id].checked = true;
+            userAnswers[q.id].isJustViewed = false;
+        }
+
+        revealFeedbackDisplay(q);
+        updateGlobalScore();
+    }
+
+    function revealFeedbackDisplay(q) {
+        const box = document.getElementById('card-feedback-box');
+        const info = userAnswers[q.id];
+        const idxBtn = document.getElementById(`idx-btn-${currentIdx}`);
+
+        if (info.isJustViewed) {
+            box.className = "feedback just-view";
+            box.innerHTML = `<strong>📖 정답 및 해설 단순 조회 (정답: ${q.ans}번)</strong>`;
+            if(idxBtn) { idxBtn.className = "index-btn just-viewed"; }
+        } else {
+            if (info.chosen === q.ans) {
+                box.className = "feedback correct";
+                box.innerHTML = `<strong>🎉 정답입니다! ⭕</strong>`;
+                if(idxBtn) { idxBtn.className = "index-btn solved-correct"; }
+            } else {
+                box.className = "feedback wrong";
+                box.innerHTML = `<strong>⚠️ 오답입니다. ❌ (정답: ${q.ans}번)</strong>`;
+                if(idxBtn) { idxBtn.className = "index-btn solved-wrong"; }
+            }
+        }
+
+        box.innerHTML += `
+            <div class="explanation">
+                <strong>💡 [보건의료통계분석 해설]</strong><br>
+                ${escapeHtml(q.exp).replace(/\n/g, '<br>')}
+            </div>
+        `;
+        
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function moveQuestion(step) {
+        currentIdx += step;
+        if(currentIdx < 0) currentIdx = 0;
+        if(currentIdx >= quizList.length) currentIdx = quizList.length - 1;
+        renderCurrentCard();
+    }
+
+    function updateGlobalScore() {
+        let correctCount = 0;
+        let solvedCount = 0;
+        quizList.forEach(q => {
+            if (userAnswers[q.id] && userAnswers[q.id].checked) {
+                if (!userAnswers[q.id].isJustViewed) {
+                    solvedCount++;
+                    if (userAnswers[q.id].chosen === q.ans) correctCount++;
+                }
+            }
+        });
+        
+        let totalInteracted = 0;
+        quizList.forEach(q => {
+            if (userAnswers[q.id] && userAnswers[q.id].checked) totalInteracted++;
+        });
+
+        document.getElementById('txt-score').textContent = `맞춘 개수: ${correctCount} 문항`;
+        const pct = quizList.length > 0 ? Math.round((totalInteracted / quizList.length) * 100) : 0;
+        document.getElementById('score-board').textContent = `풀이 진행도: ${pct}% (${totalInteracted} / ${quizList.length})`;
+    }
+</script>
+
+</body>
+</html>
